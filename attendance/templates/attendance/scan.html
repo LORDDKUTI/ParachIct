@@ -1,0 +1,131 @@
+{% extends 'attendance/base.html' %}
+
+{% block content %}
+<h2>Scan QR Code to Sign In</h2>
+
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+{% endif %}
+
+<div class="scan-container">
+    <label>Welcome, {{ request.user.username }}</label>
+    <div class="form-group">
+        <label>Select Course:</label>
+        <select id="course-select" class="form-control" required>
+            <option value="">-- Choose Course --</option>
+            {% for course in courses %}
+            <option value="{{ course.id }}">{{ course.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="scanner-section">
+        <video id="qr-video" autoplay style="width: 100%; border-radius: 12px; margin: 20px 0;"></video>
+        <div id="scan-message" style="text-align: center; padding: 15px; background: #f0f0f0; border-radius: 8px; margin: 10px 0;">
+            Position QR code in front of camera
+        </div>
+    </div>
+    
+    <button type="button" class="btn btn-primary" id="submit-btn" disabled>
+        Sign In
+    </button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script>
+const video = document.getElementById('qr-video');
+const canvas = document.createElement('canvas');
+const context = canvas.getContext('2d');
+const courseSelect = document.getElementById('course-select');
+const submitBtn = document.getElementById('submit-btn');
+const scanMessage = document.getElementById('scan-message');
+
+let qrCodeValue = '';
+let userLatitude = 0;
+let userLongitude = 0;
+
+// Get user location
+navigator.geolocation.getCurrentPosition(
+    (position) => {
+        userLatitude = position.coords.latitude;
+        userLongitude = position.coords.longitude;
+        console.log('Location obtained:', userLatitude, userLongitude);
+    },
+    (error) => {
+        alert('Please enable location services to sign in.');
+    }
+);
+
+// Start camera
+navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then((stream) => {
+        video.srcObject = stream;
+        video.play();
+        scanQRCode();
+    })
+    .catch((err) => {
+        scanMessage.textContent = 'Camera access denied. Please allow camera access.';
+        scanMessage.style.background = '#f8d7da';
+        scanMessage.style.color = '#721c24';
+    });
+
+function scanQRCode() {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        
+        if (code && !qrCodeValue) {
+            qrCodeValue = code.data;
+            submitBtn.disabled = false;
+            scanMessage.textContent = '✅ QR Code detected! Select course and click Sign In.';
+            scanMessage.style.background = '#d4edda';
+            scanMessage.style.color = '#155724';
+            video.srcObject.getTracks().forEach(track => track.stop());
+            return;
+        }
+    }
+    
+    requestAnimationFrame(scanQRCode);
+}
+
+submitBtn.addEventListener('click', async () => {
+    if (!courseSelect.value) {
+        alert('Please select a course');
+        return;
+    }
+    
+    if (!qrCodeValue) {
+        alert('Please scan QR code first');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('qr_code', qrCodeValue);
+    formData.append('course', courseSelect.value);
+    formData.append('latitude', userLatitude);
+    formData.append('longitude', userLongitude);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    try {
+        const response = await fetch('{% url "scan_qr" %}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.redirected) {
+            window.location.href = response.url;
+        }
+    } catch (error) {
+        alert('Error submitting attendance. Please try again.');
+    }
+});
+</script>
+{% endblock %}

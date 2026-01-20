@@ -1,0 +1,52 @@
+{% extends 'attendance/base.html' %}
+
+{% block content %}
+<h2>📊 Attendance Dashboard</h2>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+        <div style="font-size: 32px; font-weight: bold;">{{ total_today }}</div>
+        <div style="font-size: 14px; opacity: 0.9;">Total Today</div>
+    </div>
+    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+        <div style="font-size: 32px; font-weight: bold;">{{ students_today }}</div>
+        <div style="font-size: 14px; opacity: 0.9;">Students Today</div>
+    </div>
+    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+        <div style="font-size: 32px; font-weight: bold;">{{ tutors_today }}</div>
+        <div style="font-size: 14px; opacity: 0.9;">Tutors Today</div>
+    </div>
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+    <thead>
+        <tr style="background: #f8f9fa;">
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Name</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Type</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Course</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Check In Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for attendance in attendances %}
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 12px;">{{ attendance.user.get_full_name }}</td>
+            <td style="padding: 12px;">{{ attendance.user.get_user_type_display }}</td>
+            <td style="padding: 12px;">{{ attendance.course.name }}</td>
+            <td style="padding: 12px;">{{ attendance.check_in_time|date:"Y-m-d H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" style="padding: 20px; text-align: center; color: #999;">No attendance records found</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<label>Admin Actions</label>
+<ul>
+    <li><a href="{% url 'add_course' %}">➕ Add Courses</a></li>
+    <li><a href="{% url 'add_location' %}">📍 Add Locations</a></li>
+</ul>
+
+{% endblock %}

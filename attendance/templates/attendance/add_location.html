@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Location</title>
+</head>
+<body>
+
+<h2>Add Organization Location</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="text" name="name" placeholder="Location Name" required><br><br>
+    <input type="number" step="any" name="latitude" placeholder="Latitude" required><br><br>
+    <input type="number" step="any" name="longitude" placeholder="Longitude" required><br><br>
+    <input type="number" name="radius" placeholder="Radius (meters)" required><br><br>
+    <button type="submit">Add Location</button>
+</form>
+
+<hr>
+
+<h3>Existing Locations</h3>
+<ul>
+    {% for location in locations %}
+        <li>
+            {{ location.name }} — {{ location.radius_meters }}m
+            {% if not location.is_active %}(Inactive){% endif %}
+        </li>
+    {% empty %}
+        <li>No locations added</li>
+    {% endfor %}
+</ul>
+
+<a href="{% url 'admin_dashboard' %}">⬅ Back to Dashboard</a>
+
+</body>
+</html>
+

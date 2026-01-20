@@ -1,0 +1,14 @@
+{% extends 'attendance/base.html' %}
+
+{% block content %}
+<div style="text-align: center; padding: 40px 0;">
+    <div style="font-size: 80px; margin-bottom: 20px;">✅</div>
+    <h2 style="color: #10b981; margin-bottom: 20px;">Successfully Signed In!</h2>
+    <p style="color: #666; font-size: 18px; margin-bottom: 30px;">
+        Your attendance has been recorded.
+    </p>
+    <a href="{% url 'scan_qr' %}" class="btn btn-primary" style="display: inline-block; text-decoration: none;">
+        Back to Scanner
+    </a>
+</div>
+{% endblock %}
