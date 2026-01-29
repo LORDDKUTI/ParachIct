@@ -81,57 +81,51 @@ def attendance_success(request):
 
 @login_required
 def admin_dashboard(request):
-    """Admin dashboard for viewing attendance"""
     if request.user.user_type != 'admin':
         messages.error(request, 'Access denied.')
         return redirect('scan_qr')
-    
-    # Get filter parameters
+
+    # Filter parameters
     date_filter = request.GET.get('date', timezone.now().date())
     course_filter = request.GET.get('course', '')
     user_type_filter = request.GET.get('user_type', '')
-    
-    # Build query
-    attendances = Attendance.objects.select_related('user', 'course')
-    
+    location_filter = request.GET.get('location', '')
+
+    # Base queryset
+    attendances = Attendance.objects.select_related('user', 'course', 'qr_code')
+
     if date_filter:
         attendances = attendances.filter(check_in_time__date=date_filter)
-    
     if course_filter:
         attendances = attendances.filter(course_id=course_filter)
-    
     if user_type_filter:
         attendances = attendances.filter(user__user_type=user_type_filter)
-    
+    if location_filter:
+        attendances = attendances.filter(qr_code__organizationlocation__id=location_filter)
+
     # Statistics
-    total_today = Attendance.objects.filter(
-        check_in_time__date=timezone.now().date()
-    ).count()
-    
-    students_today = Attendance.objects.filter(
-        check_in_time__date=timezone.now().date(),
-        user__user_type='student'
-    ).count()
-    
-    tutors_today = Attendance.objects.filter(
-        check_in_time__date=timezone.now().date(),
-        user__user_type='tutor'
-    ).count()
-    
+    total_today = Attendance.objects.filter(check_in_time__date=timezone.now().date()).count()
+    students_today = Attendance.objects.filter(check_in_time__date=timezone.now().date(), user__user_type='student').count()
+    tutors_today = Attendance.objects.filter(check_in_time__date=timezone.now().date(), user__user_type='tutor').count()
+
     courses = Course.objects.filter(is_active=True)
-    
+    locations = OrganizationLocation.objects.filter(is_active=True)  # Pass active locations
+
     context = {
         'attendances': attendances,
         'total_today': total_today,
         'students_today': students_today,
         'tutors_today': tutors_today,
         'courses': courses,
+        'locations': locations,           # New
         'date_filter': date_filter,
         'course_filter': course_filter,
         'user_type_filter': user_type_filter,
+        'location_filter': location_filter,  # New
     }
-    
+
     return render(request, 'attendance/admin_dashboard.html', context)
+
 
 
 
@@ -216,3 +210,27 @@ def post_login_redirect(request):
     if request.user.user_type == 'admin':
         return redirect('admin_dashboard')
     return redirect('scan_qr')
+
+
+
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .forms import StudentRegistrationForm
+from django.contrib.auth import login
+
+def student_register(request):
+    if request.method == 'POST':
+        form = StudentRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, "Account created successfully!")
+            return redirect('scan_qr')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = StudentRegistrationForm()
+    return render(request, 'attendance/student_register.html', {'form': form})

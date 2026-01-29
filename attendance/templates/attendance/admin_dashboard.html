@@ -3,6 +3,7 @@
 {% block content %}
 <h2>📊 Attendance Dashboard</h2>
 
+<!-- Statistics Cards -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center;">
         <div style="font-size: 32px; font-weight: bold;">{{ total_today }}</div>
@@ -18,35 +19,95 @@
     </div>
 </div>
 
-<table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+<!-- Filters Form -->
+<form method="get" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 25px; align-items: center;">
+    <input type="date" name="date" value="{{ date_filter }}" style="padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1);">
+    
+    <select name="user_type" style="padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1);">
+        <option value="">All Types</option>
+        <option value="student" {% if user_type_filter == 'student' %}selected{% endif %}>Student</option>
+        <option value="tutor" {% if user_type_filter == 'tutor' %}selected{% endif %}>Tutor</option>
+    </select>
+    
+
+    <select name="course" style="padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1);">
+        <option value="">All Courses</option>
+        {% for course in courses %}
+            <option value="{{ course.id }}" {% if course_filter|add:'' == course.id|stringformat:"s" %}selected{% endif %}>{{ course.name }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="location" style="padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1);">
+    <option value="">All Locations</option>
+    {% for location in locations %}
+        <option value="{{ location.id }}" {% if location_filter|add:'' == location.id|stringformat:"s" %}selected{% endif %}>
+            {{ location.name }}
+        </option>
+    {% endfor %}
+</select>
+
+
+    <button type="submit" style="
+        padding: 10px 16px;
+        border-radius: 12px;
+        border: none;
+        background: linear-gradient(135deg, #00c6ff, #0072ff);
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+    ">Filter</button>
+</form>
+
+<!-- Attendance Table -->
+<table style="width: 100%; border-collapse: collapse; margin-top: 10px; backdrop-filter: blur(6px); border-radius: 12px; overflow: hidden;">
     <thead>
-        <tr style="background: #f8f9fa;">
-            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Name</th>
-            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Type</th>
-            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Course</th>
-            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Check In Time</th>
+        <tr style="background: rgba(255,255,255,0.15);">
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2); color: white;">Name</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2); color: white;">Role</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2); color: white;">Course</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2); color: white;">Check In Time</th>
         </tr>
     </thead>
     <tbody>
         {% for attendance in attendances %}
-        <tr style="border-bottom: 1px solid #dee2e6;">
-            <td style="padding: 12px;">{{ attendance.user.get_full_name }}</td>
-            <td style="padding: 12px;">{{ attendance.user.get_user_type_display }}</td>
-            <td style="padding: 12px;">{{ attendance.course.name }}</td>
-            <td style="padding: 12px;">{{ attendance.check_in_time|date:"Y-m-d H:i" }}</td>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <td style="padding: 12px; color: white;">{{ attendance.user.get_full_name }}</td>
+            <td style="padding: 12px; color: white;">{{ attendance.user.get_user_type_display }}</td>
+            <td style="padding: 12px; color: white;">{{ attendance.course.name }}</td>
+            <td style="padding: 12px; color: white;">{{ attendance.check_in_time|date:"Y-m-d H:i" }}</td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="4" style="padding: 20px; text-align: center; color: #999;">No attendance records found</td>
+            <td colspan="4" style="padding: 20px; text-align: center; color: #ccc;">No attendance records found</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
-<label>Admin Actions</label>
-<ul>
-    <li><a href="{% url 'add_course' %}">➕ Add Courses</a></li>
-    <li><a href="{% url 'add_location' %}">📍 Add Locations</a></li>
-</ul>
+<!-- Admin Actions (Styled as buttons) -->
+<div style="margin-top: 25px; display: flex; gap: 15px; flex-wrap: wrap;">
+    <a href="{% url 'add_course' %}" style="
+        display: inline-block;
+        padding: 12px 20px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+        transition: 0.2s;
+    ">➕ Add Courses</a>
+
+    <a href="{% url 'add_location' %}" style="
+        display: inline-block;
+        padding: 12px 20px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+        transition: 0.2s;
+    ">📍 Add Locations</a>
+</div>
 
 {% endblock %}
