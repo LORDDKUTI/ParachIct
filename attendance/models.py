@@ -11,8 +11,10 @@ class User(AbstractUser):
         ('tutor', 'Tutor'),
         ('admin', 'Admin'),
     )
-    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES)
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default="student")
     phone_number = models.CharField(max_length=15, blank=True)
+    age= models.PositiveBigIntegerField(null=True, blank=True)
+    pasport= models.ImageField(upload_to="users/students", null=True, blank=True)
     
     def __str__(self):
         return f"{self.username} ({self.get_user_type_display()})"
@@ -76,3 +78,7 @@ class Attendance(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.course.name} - {self.check_in_time.date()}"
+
+
+
+

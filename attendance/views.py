@@ -7,6 +7,50 @@ from datetime import datetime, timedelta
 from geopy.distance import geodesic
 from .models import User, Course, QRCode, Attendance, OrganizationLocation
 
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.contrib.auth import get_user_model
+
+User= get_user_model()
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def studentProfile(request):
+    user= request.user
+    return Response(
+        {"id":user.id, "username":user.username, "course": user.course}
+        ,status=status.HTTP_200_OK
+    )
+
+from .serializer import SignupSerializer, LoginSerializer
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def signupStudent(request):
+    serializer= SignupSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def Login(request):
+    serializer= LoginSerializer(data=request.data)
+    if serializer.is_valid():
+        user= serializer.validated_data["user"]
+        login(request, user)
+        return Response(
+            {"id":user.id,  "username":user.username, "user_type":user.user_type}, status=status.HTTP_200_OK
+        )
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
 def verify_location(latitude, longitude):
     """Verify if user is within organization premises"""
     locations = OrganizationLocation.objects.filter(is_active=True)
