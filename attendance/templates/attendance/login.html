@@ -106,7 +106,7 @@
         </div>
     {% endif %}
 
-    <form method="post">
+    <form action="{% url 'student_login' %}" method="post">
         {% csrf_token %}
 
         <input type="text" name="username" placeholder="Username" required>

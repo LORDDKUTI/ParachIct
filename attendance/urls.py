@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import login, signupStudent, studentProfile
+from .views import login
 
 urlpatterns = [
     path('scan/', views.scan_qr, name='scan_qr'),
@@ -10,7 +10,7 @@ urlpatterns = [
     path('admin/courses/', views.add_course, name='add_course'),
     path('admin/locations/', views.add_location, name='add_location'),
 
-    path("signup/", signupStudent, name="signup"),
-    path("login/", login, name="login"),
-    path("student_profile", studentProfile, name="student_profile") 
-]
+    path("student/signup/", views.student_signup, name="student_signup"),
+    path("student/login/", views.student_login, name="student_login"),
+    path("student/dashboard/", views.student_dashboard, name="student_dashboard"),
+    ]

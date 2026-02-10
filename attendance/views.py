@@ -11,49 +11,79 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 
 User= get_user_model()
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def studentProfile(request):
-    user= request.user
-    return Response(
-        {"id":user.id, "username":user.username, "course": user.course}
-        ,status=status.HTTP_200_OK
+def student_signup(request):
+    if request.method != "POST":
+        return render(request, "attendance/signup_student.html")
+    
+    username= request.POST.get("username").strip()
+    password= request.POST.get("password")
+
+    if not username or not password:
+        messages.error(request, "username and password required")
+        return render(request, "attendance/signup_student.html")
+    if username and User.objects.filter(username= username).exists():
+        messages.error(request, "user exists")
+        return render(request, "attendance/signup_student.html", {'username':username})
+    if len(password)<8:
+        messages.error(request, "password gotta be 8 ski")
+        return render(request, "attendance/signup_student.html")
+    user= User.objects.create_user(
+        username=username, password=password
     )
+    user.save()
+    messages.success(request, "Account created successfully")
+    return redirect("student_login")
 
-from .serializer import SignupSerializer, LoginSerializer
+def student_login(request):
+    if request.method != "POST":
+        return render(request, "attendance/login.html")
+    
+    usernameInp= request.POST.get("username" )
+    password= request.POST.get("password")
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def signupStudent(request):
-    serializer= SignupSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if not usernameInp or not password:
+        messages.error(request, "username and password required")
+        return render(request, "attendance/login.html")
+    if len(password)<8:
+        messages.error(request, "password gotta be 8 ski")
+        return render(request, "attendance/login.html")
+    
+    #gotta allow email login
+    auth_username = usernameInp
+    if "@" in usernameInp:
+        u= User.objects.filter(email__iexact= usernameInp).first()
+        if not u:
+            messages.error(request, "no user with this email")
+            return render(request, "attendance/login.html")
+        auth_username= u.username
+    user= authenticate(request, username= auth_username, password= password)
+    if user is None:
+        messages.error(request,"Invalid credentials")
+        return render(request, "attendance/login.html")
+    login(request, user)
+    messages.success(request, "logged in")
+    return redirect("student_dashboard")
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def Login(request):
-    serializer= LoginSerializer(data=request.data)
-    if serializer.is_valid():
-        user= serializer.validated_data["user"]
-        login(request, user)
-        return Response(
-            {"id":user.id,  "username":user.username, "user_type":user.user_type}, status=status.HTTP_200_OK
-        )
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-
+@login_required
+def student_dashboard(request):
+    
+    return render(request, "attendance/home.html", {"user": request.user})
+    
 def verify_location(latitude, longitude):
     """Verify if user is within organization premises"""
-    locations = OrganizationLocation.objects.filter(is_active=True)
+    try:
+        latitude= float(latitude)
+        longitude= float(longitude)
+    except(TypeError, ValueError):
+        return False
+    #pulls active locations frm db
+    locations = OrganizationLocation.objects.filter(is_active=True)    
+    if not locations.exists():
+        return False
     
     for location in locations:
         org_coords = (location.latitude, location.longitude)
@@ -61,25 +91,21 @@ def verify_location(latitude, longitude):
         distance = geodesic(org_coords, user_coords).meters
         
         if distance <= location.radius_meters:
-            return True
-    
+            return True    
     return False
 
-@login_required
+# @login_required
 def scan_qr(request):
     """Main QR scanning page"""
     courses = Course.objects.filter(is_active=True)
-    
+
+ 
     if request.method == 'POST':
         qr_code_value = request.POST.get('qr_code')
         course_id = request.POST.get('course')
         latitude = float(request.POST.get('latitude', 0))
         longitude = float(request.POST.get('longitude', 0))
         
-        # Verify location
-        if not verify_location(latitude, longitude):
-            messages.error(request, 'You must be within the organization premises to sign in.')
-            return redirect('scan_qr')
         
         # Verify QR code
         try:
@@ -87,23 +113,21 @@ def scan_qr(request):
         except QRCode.DoesNotExist:
             messages.error(request, 'Invalid QR code.')
             return redirect('scan_qr')
-        
+        if not latitude or not longitude:
+            messages.error(request, "Location permission required")
+            return redirect("scan_qr")        
+        # Verify location
+        if not verify_location(latitude, longitude):
+            messages.error(request, 'You must be within the organization premises to sign in.')
+            return redirect('scan_qr')    
         # Get course
-        course = get_object_or_404(Course, id=course_id)
-        
+        course = get_object_or_404(Course, id=course_id)   
         # Check if already signed in today
         today = timezone.now().date()
-        existing_attendance = Attendance.objects.filter(
-            user=request.user,
-            course=course,
-            check_in_time__date=today
-        ).first()
-        
-        if existing_attendance:
-            messages.warning(request, f'You have already signed in for {course.name} today.')
-            return redirect('scan_qr')
-        
-        # Create attendance record
+        if Attendance.objects.filter(user=request.user, course=course, check_in_time=today).exists():
+            messages.warning(request, f"you have already scanned your attendance for {course.name} today..")
+            return redirect("student_dashboard")
+        # Finally create attendance rec
         Attendance.objects.create(
             user=request.user,
             course=course,
@@ -118,12 +142,12 @@ def scan_qr(request):
     
     return render(request, 'attendance/scan.html', {'courses': courses})
 
-@login_required
+# @login_required
 def attendance_success(request):
     """Success page after signing in"""
     return render(request, 'attendance/success.html')
 
-@login_required
+# @login_required
 def admin_dashboard(request):
     """Admin dashboard for viewing attendance"""
     if request.user.user_type != 'admin':
@@ -255,7 +279,7 @@ from django.contrib.auth import login
 from django.shortcuts import redirect
 
 
-@login_required
+# @login_required
 def post_login_redirect(request):
     if request.user.user_type == 'admin':
         return redirect('admin_dashboard')
