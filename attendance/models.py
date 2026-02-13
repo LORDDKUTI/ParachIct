@@ -29,8 +29,28 @@ class Course(models.Model):
     def __str__(self):
         return f"{self.name} ({self.code})"
 
+
+class OrganizationLocation(models.Model):
+    name = models.CharField(max_length=200)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    radius_meters = models.IntegerField(default=100)
+    is_active = models.BooleanField(default=True)
+    
+    
+    def __str__(self):
+        return self.name
+
+
 class QRCode(models.Model):
     code = models.CharField(max_length=100, unique=True)
+    location = models.ForeignKey(
+        OrganizationLocation,
+        on_delete=models.CASCADE,
+        related_name="qr_codes",
+        null=True,
+        blank=True
+    )
     qr_image = models.ImageField(upload_to='qr_codes/', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
@@ -53,15 +73,6 @@ class QRCode(models.Model):
     def __str__(self):
         return self.code
 
-class OrganizationLocation(models.Model):
-    name = models.CharField(max_length=200)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
-    radius_meters = models.IntegerField(default=100)
-    is_active = models.BooleanField(default=True)
-    
-    def __str__(self):
-        return self.name
 
 class Attendance(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

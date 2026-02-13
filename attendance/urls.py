@@ -10,4 +10,6 @@ urlpatterns = [
     path('admin/locations/', views.add_location, name='add_location'),
     
     path('register/', views.student_register, name='student_register'),
+    path("logout/", views.logout_view, name="logout"),
+
 ]

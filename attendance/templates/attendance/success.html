@@ -1,14 +1,486 @@
 {% extends 'attendance/base.html' %}
 
+{% block title %}Attendance Recorded — PARACH ICT Academy{% endblock %}
+
+{% block extra_head %}
+<style>
+
+    /* ══════════════════════════════════════
+       PAGE SHELL
+    ══════════════════════════════════════ */
+    .success-page {
+        width: 100%;
+        max-width: 500px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: success-in 0.8s cubic-bezier(0.23,1,0.32,1) forwards;
+        opacity: 0;
+        transform: translateY(24px);
+    }
+
+    @keyframes success-in {
+        to { opacity:1; transform:translateY(0); }
+    }
+
+    /* ══════════════════════════════════════
+       GLASS CARD
+    ══════════════════════════════════════ */
+    .success-card {
+        width: 100%;
+        background: var(--panel-bg);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+        padding: 44px 36px 36px;
+        position: relative;
+        overflow: hidden;
+        box-shadow:
+            0 0 0 1px rgba(0,245,255,0.04),
+            0 24px 60px rgba(0,0,0,0.65),
+            inset 0 1px 0 rgba(255,255,255,0.05),
+            0 0 80px rgba(0,255,136,0.04);
+        text-align: center;
+    }
+
+    /* Corner brackets */
+    .success-card::before, .success-card::after {
+        content: '';
+        position: absolute;
+        width: 18px; height: 18px;
+        border-color: var(--neon-green);
+        border-style: solid;
+        opacity: 0.4;
+    }
+    .success-card::before { top:0; left:0; border-width:2px 0 0 2px; border-radius:6px 0 0 0; }
+    .success-card::after  { bottom:0; right:0; border-width:0 2px 2px 0; border-radius:0 0 6px 0; }
+
+    /* Shimmer */
+    .success-shimmer {
+        position: absolute;
+        top:0; left:-100%;
+        width:55%; height:100%;
+        background: linear-gradient(90deg, transparent, rgba(0,255,136,0.03), transparent);
+        animation: shimmer-sweep 7s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    @keyframes shimmer-sweep {
+        0%  { left:-100%; }
+        50% { left:150%;  }
+        100%{ left:150%;  }
+    }
+
+    /* ══════════════════════════════════════
+       ICON RING
+    ══════════════════════════════════════ */
+    .success-icon-wrap {
+        position: relative;
+        width: 96px;
+        height: 96px;
+        margin: 0 auto 28px;
+    }
+
+    /* Outer pulse ring */
+    .icon-ring-outer {
+        position: absolute;
+        inset: -16px;
+        border-radius: 50%;
+        border: 1px solid rgba(0,255,136,0.2);
+        animation: ring-expand 2.5s ease-out infinite;
+    }
+
+    .icon-ring-mid {
+        position: absolute;
+        inset: -8px;
+        border-radius: 50%;
+        border: 1px solid rgba(0,255,136,0.3);
+        animation: ring-expand 2.5s 0.4s ease-out infinite;
+    }
+
+    @keyframes ring-expand {
+        0%   { transform:scale(0.85); opacity:0.8; }
+        100% { transform:scale(1.2);  opacity:0;   }
+    }
+
+    /* Main circle */
+    .icon-circle {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: rgba(0,255,136,0.08);
+        border: 1.5px solid rgba(0,255,136,0.4);
+        box-shadow: 0 0 30px rgba(0,255,136,0.18), inset 0 0 20px rgba(0,255,136,0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: circle-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes circle-pulse {
+        0%,100% { box-shadow: 0 0 30px rgba(0,255,136,0.18), inset 0 0 20px rgba(0,255,136,0.06); }
+        50%      { box-shadow: 0 0 50px rgba(0,255,136,0.32), inset 0 0 28px rgba(0,255,136,0.10); }
+    }
+
+    /* Animated checkmark SVG */
+    .check-svg {
+        width: 42px; height: 42px;
+    }
+
+    .check-path {
+        stroke: var(--neon-green);
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+        stroke-dasharray: 40;
+        stroke-dashoffset: 40;
+        animation: draw-check 0.6s 0.3s cubic-bezier(0.4,0,0.2,1) forwards;
+    }
+
+    @keyframes draw-check {
+        to { stroke-dashoffset: 0; }
+    }
+
+    /* ══════════════════════════════════════
+       TEXT CONTENT
+    ══════════════════════════════════════ */
+    .success-status-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: rgba(0,255,136,0.08);
+        border: 1px solid rgba(0,255,136,0.2);
+        border-radius: 20px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--neon-green);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+    }
+
+    .success-dot {
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        background: var(--neon-green);
+        box-shadow: 0 0 5px var(--neon-green);
+        animation: dot-blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes dot-blink {
+        0%,100% { opacity:1; } 50% { opacity:0.2; }
+    }
+
+    .success-title {
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--text-primary);
+        letter-spacing: -0.3px;
+        margin-bottom: 10px;
+        line-height: 1.1;
+    }
+
+    .success-title span {
+        color: var(--neon-green);
+    }
+
+    .success-desc {
+        font-size: 14px;
+        color: var(--text-dim);
+        line-height: 1.7;
+        margin-bottom: 28px;
+        font-family: var(--font-mono);
+        letter-spacing: 0.3px;
+    }
+
+    /* ══════════════════════════════════════
+       TIMESTAMP ROW
+    ══════════════════════════════════════ */
+    .success-meta {
+        display: flex;
+        justify-content: center;
+        gap: 24px;
+        padding: 14px 0;
+        border-top: 1px solid rgba(0,245,255,0.07);
+        border-bottom: 1px solid rgba(0,245,255,0.07);
+        margin-bottom: 28px;
+        flex-wrap: wrap;
+    }
+
+    .meta-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .meta-label {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        color: var(--text-dim);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        opacity: 0.6;
+    }
+
+    .meta-value {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: var(--neon-cyan);
+        letter-spacing: 1px;
+    }
+
+    /* ══════════════════════════════════════
+       ACTION BUTTONS
+    ══════════════════════════════════════ */
+    .success-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .btn-scan-again {
+        position: relative;
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: var(--font-main);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--dark-bg);
+        background: linear-gradient(135deg, var(--neon-green), #00cc6a);
+        box-shadow: 0 0 22px rgba(0,255,136,0.22), 0 4px 14px rgba(0,0,0,0.4);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+        text-decoration: none;
+        display: block;
+    }
+
+    .btn-scan-again::before {
+        content: '';
+        position: absolute;
+        top:0; left:-100%;
+        width:60%; height:100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .btn-scan-again:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+        box-shadow: 0 0 38px rgba(0,255,136,0.35), 0 8px 22px rgba(0,0,0,0.5);
+    }
+
+    .btn-scan-again:hover::before { left:150%; }
+    .btn-scan-again:active { transform:translateY(0); filter:brightness(0.95); }
+
+    .btn-dashboard {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 12px;
+        border-radius: 4px;
+        border: 1px solid rgba(0,245,255,0.18);
+        background: transparent;
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        text-decoration: none;
+        transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+
+    .btn-dashboard:hover {
+        border-color: rgba(0,245,255,0.35);
+        color: var(--neon-cyan);
+        background: rgba(0,245,255,0.05);
+    }
+
+    /* ══════════════════════════════════════
+       CARD FOOTER
+    ══════════════════════════════════════ */
+    .success-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(0,245,255,0.07);
+    }
+
+    .footer-secure {
+        display: flex; align-items: center; gap: 7px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-dim);
+        letter-spacing: 0.8px;
+    }
+
+    .footer-ref {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-dim);
+        opacity: 0.4;
+        letter-spacing: 0.5px;
+    }
+
+    /* ══════════════════════════════════════
+       FLOATING CONFETTI PARTICLES (CSS only)
+    ══════════════════════════════════════ */
+    .confetti-wrap {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 5;
+        overflow: hidden;
+    }
+
+    .confetti-dot {
+        position: absolute;
+        top: -10px;
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        opacity: 0;
+        animation: confetti-fall linear forwards;
+    }
+
+    @keyframes confetti-fall {
+        0%   { opacity:1; transform: translateY(0) rotate(0deg) scale(1); }
+        80%  { opacity:0.8; }
+        100% { opacity:0; transform: translateY(110vh) rotate(720deg) scale(0.3); }
+    }
+</style>
+{% endblock %}
+
+
 {% block content %}
-<div style="text-align: center; padding: 40px 0;">
-    <div style="font-size: 80px; margin-bottom: 20px;">✅</div>
-    <h2 style="color: #10b981; margin-bottom: 20px;">Successfully Signed In!</h2>
-    <p style="color: #666; font-size: 18px; margin-bottom: 30px;">
-        Your attendance has been recorded.
-    </p>
-    <a href="{% url 'scan_qr' %}" class="btn btn-primary" style="display: inline-block; text-decoration: none;">
-        Back to Scanner
-    </a>
+
+<!-- Confetti burst -->
+<div class="confetti-wrap" id="confetti-wrap" aria-hidden="true"></div>
+
+<div class="success-page">
+    <div class="success-card">
+        <div class="success-shimmer"></div>
+
+        <!-- Animated icon -->
+        <div class="success-icon-wrap">
+            <div class="icon-ring-outer"></div>
+            <div class="icon-ring-mid"></div>
+            <div class="icon-circle">
+                <svg class="check-svg" viewBox="0 0 42 42">
+                    <polyline class="check-path" points="8,22 17,31 34,13"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Status tag -->
+        <div class="success-status-tag">
+            <div class="success-dot"></div>
+            ATTENDANCE RECORDED
+        </div>
+
+        <!-- Heading -->
+        <div class="success-title">
+            Successfully<br><span>Signed In!</span>
+        </div>
+
+        <div class="success-desc">
+            Your attendance has been verified<br>and logged into the system.
+        </div>
+
+        <!-- Timestamp meta row -->
+        <div class="success-meta">
+            <div class="meta-item">
+                <div class="meta-label">Date</div>
+                <div class="meta-value" id="meta-date">—</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Time</div>
+                <div class="meta-value" id="meta-time">—</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Status</div>
+                <div class="meta-value" style="color:var(--neon-green);">VERIFIED</div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="success-actions">
+            <a href="{% url 'scan_qr' %}" class="btn-scan-again">
+                Scan Again
+            </a>
+            {% comment %}
+            <a href="{% url 'dashboard' %}" class="btn-dashboard">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                </svg>
+                Go to Dashboard
+            </a>
+            {% endcomment %}
+        </div>
+
+        <!-- Footer -->
+        <div class="success-footer">
+            <div class="footer-secure">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00f5ff" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                GEO-VERIFIED SESSION
+            </div>
+            <div class="footer-ref" id="footer-ref">—</div>
+        </div>
+    </div>
 </div>
+
+<script>
+    /* ── Fill live timestamp ── */
+    const now = new Date();
+    const pad = v => String(v).padStart(2,'0');
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dateStr = `${pad(now.getDate())} ${months[now.getMonth()]} ${now.getFullYear()}`;
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const ref     = `REF-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
+
+    document.getElementById('meta-date').textContent  = dateStr;
+    document.getElementById('meta-time').textContent  = timeStr;
+    document.getElementById('footer-ref').textContent = ref;
+
+    /* ── Confetti burst ── */
+    const wrap   = document.getElementById('confetti-wrap');
+    const colors = [
+        'var(--neon-green)',
+        'var(--neon-cyan)',
+        'var(--neon-blue)',
+        'var(--neon-yellow)',
+        '#ffffff',
+    ];
+
+    for (let i = 0; i < 48; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'confetti-dot';
+        dot.style.left            = (Math.random() * 100) + 'vw';
+        dot.style.background      = colors[Math.floor(Math.random() * colors.length)];
+        dot.style.width           = dot.style.height = (Math.random() * 6 + 4) + 'px';
+        dot.style.borderRadius    = Math.random() > 0.5 ? '50%' : '2px';
+        dot.style.animationDuration  = (Math.random() * 1.8 + 1.2) + 's';
+        dot.style.animationDelay     = (Math.random() * 0.8) + 's';
+        wrap.appendChild(dot);
+    }
+
+    /* Remove confetti after animation finishes */
+    setTimeout(() => wrap.remove(), 3500);
+</script>
+
 {% endblock %}

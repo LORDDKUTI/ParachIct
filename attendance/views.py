@@ -12,6 +12,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import get_user_model
+from django.contrib.auth import login, logout
+
 
 User= get_user_model()
 
@@ -46,6 +48,13 @@ def Login(request):
             {"id":user.id,  "username":user.username, "user_type":user.user_type}, status=status.HTTP_200_OK
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@login_required
+def logout_view(request):
+    logout(request)
+    messages.success(request, "You have been logged out successfully.")
+    return redirect("login") 
 
 
 
@@ -123,52 +132,144 @@ def attendance_success(request):
     """Success page after signing in"""
     return render(request, 'attendance/success.html')
 
+
+
+from django.db.models import Count
+import json
+from django.core.paginator import Paginator
+
 @login_required
 def admin_dashboard(request):
     if request.user.user_type != 'admin':
         messages.error(request, 'Access denied.')
         return redirect('scan_qr')
 
-    # Filter parameters
-    date_filter = request.GET.get('date', timezone.now().date())
-    course_filter = request.GET.get('course', '')
-    user_type_filter = request.GET.get('user_type', '')
-    location_filter = request.GET.get('location', '')
+    # ----------------------------
+    # Get Filter Parameters
+    # ----------------------------
+    date_filter = request.GET.get('date')
+    course_filter = request.GET.get('course')
+    user_type_filter = request.GET.get('user_type')
+    location_filter = request.GET.get('location')
 
+    # Convert date string to proper date object
+    if date_filter:
+        try:
+            date_filter = datetime.strptime(date_filter, "%Y-%m-%d").date()
+        except ValueError:
+            date_filter = timezone.now().date()
+    else:
+        date_filter = timezone.now().date()
+
+    # ----------------------------
+    # Base Queryset
+    # ----------------------------
+    attendances = Attendance.objects.select_related(
+        'user', 'course', 'qr_code'
+    )
+
+    # ----------------------------
+    # Apply Filters
+    # ----------------------------
     # Base queryset
     attendances = Attendance.objects.select_related('user', 'course', 'qr_code')
 
-    if date_filter:
-        attendances = attendances.filter(check_in_time__date=date_filter)
+    # Apply date filter
+    attendances = attendances.filter(check_in_time__date=date_filter)
+
+    # Apply course filter
     if course_filter:
         attendances = attendances.filter(course_id=course_filter)
+
+    # Apply user type filter
     if user_type_filter:
         attendances = attendances.filter(user__user_type=user_type_filter)
+
+    # Apply location filter (fixed)
     if location_filter:
-        attendances = attendances.filter(qr_code__organizationlocation__id=location_filter)
+        attendances = attendances.filter(qr_code__location__id=location_filter)
 
-    # Statistics
-    total_today = Attendance.objects.filter(check_in_time__date=timezone.now().date()).count()
-    students_today = Attendance.objects.filter(check_in_time__date=timezone.now().date(), user__user_type='student').count()
-    tutors_today = Attendance.objects.filter(check_in_time__date=timezone.now().date(), user__user_type='tutor').count()
+    location_stats = attendances.values('qr_code__location__name').annotate(
+        total=Count('id')
+    )
 
+    location_labels = [l['qr_code__location__name'] for l in location_stats]
+    location_totals = [l['total'] for l in location_stats]
+
+
+
+    print("Location filter:", location_filter)
+    print("Total attendances before location filter:", attendances.count())
+
+    # ----------------------------
+    # Statistics (BASED ON FILTERS)
+    # ----------------------------
+    total_count = attendances.count()
+    students_count = attendances.filter(user__user_type='student').count()
+    tutors_count = attendances.filter(user__user_type='tutor').count()
+
+    # ----------------------------
+    # Extra: Course Breakdown (For Future Charts)
+    # ----------------------------
+    course_stats = attendances.values('course__name').annotate(
+        total=Count('id')
+    )
+
+    course_labels = [c['course__name'] for c in course_stats]
+    course_totals = [c['total'] for c in course_stats]
+
+    # ----------------------------
+    # Fetch Dropdown Data
+    # ----------------------------
     courses = Course.objects.filter(is_active=True)
-    locations = OrganizationLocation.objects.filter(is_active=True)  # Pass active locations
+    locations = OrganizationLocation.objects.filter(is_active=True)
+
+
+    current_month = timezone.now().month
+    current_year = timezone.now().year
+
+    monthly_attendance = Attendance.objects.filter(
+        check_in_time__month=current_month,
+        check_in_time__year=current_year
+    )
+
+    monthly_total = monthly_attendance.count()
+
+    top_course = (
+        monthly_attendance.values('course__name')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+        .first()
+    )
+
+
+    #Pagination
+    paginator = Paginator(attendances, 15)
+    page_number = request.GET.get('page')
+    attendances = paginator.get_page(page_number)
 
     context = {
         'attendances': attendances,
-        'total_today': total_today,
-        'students_today': students_today,
-        'tutors_today': tutors_today,
+        'total_today': total_count,
+        'students_today': students_count,
+        'tutors_today': tutors_count,
         'courses': courses,
-        'locations': locations,           # New
+        'locations': locations,
         'date_filter': date_filter,
         'course_filter': course_filter,
         'user_type_filter': user_type_filter,
-        'location_filter': location_filter,  # New
+        'location_filter': location_filter,
+        'course_stats': course_stats,  # For charts later
+        'course_labels': json.dumps(course_labels),
+        'course_totals': json.dumps(course_totals),
+        'location_labels': json.dumps(location_labels),
+        'location_totals': json.dumps(location_totals),
+        'monthly_total': monthly_total,
+        'top_course': top_course,
     }
 
     return render(request, 'attendance/admin_dashboard.html', context)
+
 
 
 
@@ -278,3 +379,10 @@ def student_register(request):
     else:
         form = StudentRegistrationForm()
     return render(request, 'attendance/student_register.html', {'form': form})
+
+
+
+
+
+
+
