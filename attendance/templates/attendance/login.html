@@ -494,6 +494,7 @@
     <div class="bg-glow"></div>
     <div class="bg-grid"></div>
 
+<<<<<<< HEAD
     <!-- Circuit SVG pattern -->
     <svg id="circuit-canvas" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -505,6 +506,28 @@
         <g id="circuit-lines" filter="url(#glow)"></g>
         <g id="circuit-nodes"></g>
     </svg>
+=======
+    <h2>🔐 Login</h2>
+
+    {% if form.errors %}
+        <div class="error">
+            Invalid username or password
+        </div>
+    {% endif %}
+
+    <form action="{% url 'student_login' %}" method="post">
+        {% csrf_token %}
+
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="password" name="password" placeholder="Password" required>
+
+        <button type="submit">Sign In</button>
+    </form>
+
+    <div class="footer-text">
+        Secure access to attendance system
+    </div>
+>>>>>>> 425f204d3c70eb974a33a8f3532e3268655b9eb4
 
     <!-- Particles -->
     <div class="particles" id="particles"></div>
