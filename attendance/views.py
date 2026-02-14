@@ -11,13 +11,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
-<<<<<<< HEAD
-from django.contrib.auth import get_user_model
-from django.contrib.auth import login, logout
-
-=======
-from django.contrib.auth import get_user_model, authenticate
->>>>>>> 425f204d3c70eb974a33a8f3532e3268655b9eb4
+from django.contrib.auth import get_user_model, authenticate, login, logout
 
 User= get_user_model()
 
@@ -44,13 +38,12 @@ def student_signup(request):
     messages.success(request, "Account created successfully")
     return redirect("student_login")
 
-<<<<<<< HEAD
-from .serializer import SignupSerializer, LoginSerializer
+from .serializer import SignupSerializer, LoginSerializer 
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def signupStudent(request):
-    serializer= SignupSerializer(data=request.data)
+    serializer = SignupSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -59,12 +52,13 @@ def signupStudent(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def Login(request):
-    serializer= LoginSerializer(data=request.data)
+    serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
-        user= serializer.validated_data["user"]
+        user = serializer.validated_data["user"]
         login(request, user)
         return Response(
-            {"id":user.id,  "username":user.username, "user_type":user.user_type}, status=status.HTTP_200_OK
+            {"id": user.id, "username": user.username, "user_type": user.user_type},
+            status=status.HTTP_200_OK
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -73,42 +67,43 @@ def Login(request):
 def logout_view(request):
     logout(request)
     messages.success(request, "You have been logged out successfully.")
-    return redirect("login") 
+    return redirect("login")
 
-
-
-=======
 def student_login(request):
     if request.method != "POST":
         return render(request, "attendance/login.html")
-    
-    usernameInp= request.POST.get("username" )
-    password= request.POST.get("password")
->>>>>>> 425f204d3c70eb974a33a8f3532e3268655b9eb4
+
+    usernameInp = request.POST.get("username")
+    password = request.POST.get("password")
 
     if not usernameInp or not password:
         messages.error(request, "username and password required")
         return render(request, "attendance/login.html")
-    if len(password)<8:
+
+    if len(password) < 8:
         messages.error(request, "password gotta be 8 ski")
         return render(request, "attendance/login.html")
-    
-    #gotta allow email login
+
+    # allow email login
     auth_username = usernameInp
     if "@" in usernameInp:
-        u= User.objects.filter(email__iexact= usernameInp).first()
+        u = User.objects.filter(email__iexact=usernameInp).first()
         if not u:
             messages.error(request, "no user with this email")
             return render(request, "attendance/login.html")
-        auth_username= u.username
-    user= authenticate(request, username= auth_username, password= password)
+        auth_username = u.username
+
+    user = authenticate(request, username=auth_username, password=password)
     if user is None:
-        messages.error(request,"Invalid credentials")
+        messages.error(request, "Invalid credentials")
         return render(request, "attendance/login.html")
+
     login(request, user)
     messages.success(request, "logged in")
     return redirect("student_dashboard")
 
+
+  
 @login_required
 def student_dashboard(request):
     
@@ -188,17 +183,11 @@ def attendance_success(request):
     """Success page after signing in"""
     return render(request, 'attendance/success.html')
 
-<<<<<<< HEAD
-
-
-from django.db.models import Count
 import json
 from django.core.paginator import Paginator
+from django.db.models import Count
 
 @login_required
-=======
-# @login_required
->>>>>>> 425f204d3c70eb974a33a8f3532e3268655b9eb4
 def admin_dashboard(request):
     if request.user.user_type != 'admin':
         messages.error(request, 'Access denied.')
